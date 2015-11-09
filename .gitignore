@@ -61,6 +61,14 @@ Makefile.config
 data/*
 models/*
 3rdparty/*
+python/caffe.egg-info/*
+*.pyd
+*.exe
+*.h5
+*.dll
+*.lib
+*.pdb
+*.exp
 *.caffemodel
 *.caffemodel.h5
 *.solverstate

@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "lmdb.h"
+#include "lmdb/lmdb.h"
 
 #include "caffe/util/db.hpp"
 

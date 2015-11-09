@@ -2,10 +2,17 @@
 """
 Classifier is an image classifier specialization of Net.
 """
-
+import logging
 import numpy as np
 
 import caffe
+from IPython import embed
+
+
+
+
+
+
 
 
 class Classifier(caffe.Net):
@@ -23,7 +30,9 @@ class Classifier(caffe.Net):
     def __init__(self, model_file, pretrained_file, image_dims=None,
                  mean=None, input_scale=None, raw_scale=None,
                  channel_swap=None):
-        caffe.Net.__init__(self, model_file, pretrained_file, caffe.TEST)
+        #caffe.Net.__init__(self, model_file, pretrained_file, caffe.TEST)
+        caffe.Net.__init__(self, model_file, caffe.TEST)
+        self.py_copy_from(pretrained_file)
 
         # configure pre-processing
         in_ = self.inputs[0]

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <vector>
+#include <boost/math/special_functions/fpclassify.hpp>
 
 #include "caffe/layer.hpp"
 #include "caffe/util/math_functions.hpp"
@@ -18,9 +19,9 @@ void ExpLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   // If base == -1, interpret the base as e and set log_base = 1 exactly.
   // Otherwise, calculate its log explicitly.
   const Dtype log_base = (base == Dtype(-1)) ? Dtype(1) : log(base);
-  CHECK(!isnan(log_base))
+  CHECK(!boost::math::isnan(log_base))
       << "NaN result: log(base) = log(" << base << ") = " << log_base;
-  CHECK(!isinf(log_base))
+  CHECK(!boost::math::isinf(log_base))
       << "Inf result: log(base) = log(" << base << ") = " << log_base;
   const Dtype input_scale = this->layer_param_.exp_param().scale();
   const Dtype input_shift = this->layer_param_.exp_param().shift();

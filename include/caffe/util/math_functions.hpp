@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <cmath>  // for std::fabs and std::signbit
 
+#if _MSC_VER < 1800
+    template<typename DType> inline bool signbit(DType num) { return _copysign(1.0, num) < 0; }
+#endif
+
+
 #include "glog/logging.h"
 
 #include "caffe/common.hpp"
@@ -137,8 +142,7 @@ DEFINE_CAFFE_CPU_UNARY_FUNC(sign, y[i] = caffe_sign<Dtype>(x[i]));
 // The name sngbit is meant to avoid conflicts with std::signbit in the macro.
 // The extra parens are needed because CUDA < 6.5 defines signbit as a macro,
 // and we don't want that to expand here when CUDA headers are also included.
-DEFINE_CAFFE_CPU_UNARY_FUNC(sgnbit, \
-    y[i] = static_cast<bool>((std::signbit)(x[i])));
+DEFINE_CAFFE_CPU_UNARY_FUNC(sgnbit, y[i] = static_cast<bool>((signbit)(x[i])));
 
 DEFINE_CAFFE_CPU_UNARY_FUNC(fabs, y[i] = std::fabs(x[i]));
 

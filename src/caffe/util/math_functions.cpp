@@ -7,6 +7,9 @@
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 
+#include "wincompat.h"
+
+
 namespace caffe {
 
 template<>

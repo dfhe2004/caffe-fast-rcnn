@@ -7,6 +7,7 @@
 #include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <stdint.h>
+#include <io.h>
 
 #include <algorithm>
 #include <fstream>  // NOLINT(readability/streams)

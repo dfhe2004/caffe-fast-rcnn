@@ -1,7 +1,7 @@
 #ifndef CAFFE_UTIL_IO_H_
 #define CAFFE_UTIL_IO_H_
 
-#include <unistd.h>
+//#include <unistd.h>
 #include <string>
 
 #include "google/protobuf/message.h"
@@ -14,6 +14,7 @@ namespace caffe {
 
 using ::google::protobuf::Message;
 
+/*
 inline void MakeTempFilename(string* temp_filename) {
   temp_filename->clear();
   *temp_filename = "/tmp/caffe_test.XXXXXX";
@@ -39,7 +40,7 @@ inline void MakeTempDir(string* temp_dirname) {
   *temp_dirname = temp_dirname_cstr;
   delete[] temp_dirname_cstr;
 }
-
+*/
 bool ReadProtoFromTextFile(const char* filename, Message* proto);
 
 inline bool ReadProtoFromTextFile(const string& filename, Message* proto) {

@@ -3,6 +3,13 @@ Wrap the internal caffe C++ module (_caffe.so) with a clean, Pythonic
 interface.
 """
 
+import os
+_path = os.path.abspath(__file__)
+_path = os.path.dirname(_path)
+os.environ['PATH'] = r'%s\..\..\3rdparty\bin;'%_path + os.environ['PATH']
+
+import logging
+import cPickle
 from collections import OrderedDict
 try:
     from itertools import izip_longest
@@ -11,7 +18,10 @@ except:
 import numpy as np
 
 from ._caffe import Net, SGDSolver
+from .proto import caffe_pb2
 import caffe.io
+
+
 
 # We directly update methods from Net here (rather than using composition or
 # inheritance) so that nets created by caffe (e.g., by SGDSolver) will
@@ -25,6 +35,15 @@ def _Net_blobs(self):
     blobs indexed by name
     """
     return OrderedDict(zip(self._blob_names, self._blobs))
+
+
+@property
+def _Net_blob_loss_weights(self):
+    """
+    An OrderedDict (bottom to top, i.e., input to output) of network
+    blob loss weights indexed by name
+    """
+    return OrderedDict(zip(self._blob_names, self._blob_loss_weights))
 
 
 @property
@@ -268,8 +287,102 @@ def _Net_batch(self, blobs):
                                                  padding])
         yield padded_batch
 
+
+
+def _copy_from_bin(self, src):
+    srcLayers = dict([ (e['name'],i) for i,e in enumerate(src) ])
+    
+    for i, k in enumerate(self._layer_names):
+        numBlobs = len(self.layers[i].blobs)
+        if numBlobs==0: continue
+        if not srcLayers.has_key(k):    
+            logging.debug('ignore layer(%s) from model'%k)
+            continue
+        src_blobs  = src[srcLayers[k]]['blobs']
+        dest_blobs = self.layers[i].blobs
+        assert numBlobs==len(src_blobs), 'blobs size should be same!'
+        
+        for t,e in enumerate(dest_blobs):
+            assert np.all( list(e.shape)==src_blobs[t]['shape']), '(%s vs %s) blob shape should be same!'%(
+                list(e.shape), src_blobs[t]['shape']
+            ) 
+            
+            src_blob = src_blobs[t] 
+            logging.debug('copying from %s::%s shape|%s'%(k,t, e.data.shape,))
+            if not src_blob.get('double_data',None) is None:
+                #assert e.count==len(src_blob.double_data)
+                e.double_data[...] = src_blob['double_data'].astype(e.double_data.dtype)                  
+            
+            if not src_blob.get('data',None) is None:
+                #assert e.count==len(src_blob.data)
+                e.data[...] = src_blob['data'].astype(e.data.dtype)                  
+            
+            if not src_blob.get('double_diff',None) is None:
+                e.double_diff[...] = src_blob['double_diff'].astype(e.double_diff.dtype)                  
+            
+            if not src_blob.get('diff',None) is None:
+                e.diff[...] = src_blob['diff'].astype(e.diff.dtype)                  
+
+        src_blobs = None
+    src = None
+
+
+def _copy_from_caffemode(self, src):
+    srcLayers = dict([ (e.name,i) for i,e in enumerate(src.layer) ])
+    
+    for i, k in enumerate(self._layer_names):
+        numBlobs = len(self.layers[i].blobs)
+        if numBlobs==0: continue
+        if not srcLayers.has_key(k):    
+            logging.debug('ignore layer(%s) from model'%k)
+            continue
+        src_blobs  = src.layer[srcLayers[k]].blobs
+        dest_blobs = self.layers[i].blobs
+        assert numBlobs==len(src_blobs), 'blobs size should be same!'
+        
+        for t,e in enumerate(dest_blobs):
+            assert np.all( list(e.shape)==src_blobs[t].shape.dim), '(%s vs %s) blob shape should be same!'%(
+                list(e.shape), src_blobs[t].shape.dim
+            ) 
+            
+            src_blob = src_blobs[t] 
+            logging.debug('copying from %s::%s shape|%s'%(k,t, e.data.shape,))
+            if len(src_blob.double_data)>0:
+                assert e.count==len(src_blob.double_data)
+                e.data[...] = np.asarray(src_blob.double_data, dtype=e.data.dtype).reshape(e.data.shape)                  
+            
+            if len(src_blob.data)>0:
+                assert e.count==len(src_blob.data)
+                e.data[...] = np.asarray(src_blob.data,dtype=e.data.dtype).reshape(e.data.shape)                  
+            
+            if len(src_blob.double_diff)>0:
+                e.diff[...] = np.asarray(src_blob.double_diff, dtype=e.diff.dtype).reshape(e.diff.shape)                  
+            
+            if len(src_blob.diff)>0:
+                e.diff[...] = np.asarray(src_blob.diff, dtype=e.diff.dtype).reshape(e.diff.shape)                  
+
+        src_blobs = None
+    src = None
+
+
+
+def _Net_py_copy_from(self,model_name):
+    if os.path.exists('%s.bin'%model_name):
+        src = cPickle.load(open('%s.bin'%model_name, 'rb'))        
+        _copy_from_bin(self,src)
+        return
+
+    
+    with open(model_name, 'rb') as fh:
+        src = caffe_pb2.NetParameter.FromString(fh.read())
+    _copy_from_caffemode(self,src)
+    
+
+
+
 # Attach methods to Net.
 Net.blobs = _Net_blobs
+Net.blob_loss_weights = _Net_blob_loss_weights
 Net.params = _Net_params
 Net.forward = _Net_forward
 Net.backward = _Net_backward
@@ -279,3 +392,4 @@ Net.set_input_arrays = _Net_set_input_arrays
 Net._batch = _Net_batch
 Net.inputs = _Net_inputs
 Net.outputs = _Net_outputs
+Net.py_copy_from = _Net_py_copy_from

@@ -13,9 +13,9 @@ namespace {
 
   void handle_signal(int signal) {
     switch (signal) {
-    case SIGHUP:
-      got_sighup = true;
-      break;
+    //case SIGHUP:
+    //  got_sighup = true;
+    //  break;
     case SIGINT:
       got_sigint = true;
       break;
@@ -27,7 +27,7 @@ namespace {
       LOG(FATAL) << "Tried to hookup signal handlers more than once.";
     }
     already_hooked_up = true;
-
+	/*
     struct sigaction sa;
     // Setup the handler
     sa.sa_handler = &handle_signal;
@@ -41,12 +41,12 @@ namespace {
     }
     if (sigaction(SIGINT, &sa, NULL) == -1) {
       LOG(FATAL) << "Cannot install SIGINT handler.";
-    }
+    }*/
   }
 
   // Set the signal handlers to the default.
   void UnhookHandler() {
-    if (already_hooked_up) {
+   /* if (already_hooked_up) {
       struct sigaction sa;
       // Setup the sighub handler
       sa.sa_handler = SIG_DFL;
@@ -64,6 +64,7 @@ namespace {
 
       already_hooked_up = false;
     }
+	*/
   }
 
   // Return true iff a SIGINT has been received since the last time this

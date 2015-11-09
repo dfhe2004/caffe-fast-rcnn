@@ -835,6 +835,16 @@ void Net<Dtype>::Reshape() {
 template <typename Dtype>
 void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
   int num_source_layers = param.layer_size();
+  
+  //for(int i =0; i!=num_source_layers; ++i){
+  //  const LayerParameter& _layer = param.layer(i);
+  //	LOG(INFO) << "1-->"<<i<<":" << _layer.name() << "|"<< _layer.blobs_size(); 
+  //}
+  
+  //for(int i =0; i!=layer_names_.size(); ++i){
+  //	  LOG(INFO)<<"2-->"<<i<<":"<<layer_names_[i]<<" | "<<layers_[i]->blobs().size();
+  //}  
+  
   for (int i = 0; i < num_source_layers; ++i) {
     const LayerParameter& source_layer = param.layer(i);
     const string& source_layer_name = source_layer.name();
@@ -845,14 +855,18 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
     }
     if (target_layer_id == layer_names_.size()) {
       DLOG(INFO) << "Ignoring source layer " << source_layer_name;
+      //LOG(INFO) << "Ignoring source layer " << source_layer_name;
       continue;
     }
     DLOG(INFO) << "Copying source layer " << source_layer_name;
+    //LOG(INFO) << "Copying source layer " << source_layer_name;
     vector<shared_ptr<Blob<Dtype> > >& target_blobs =
         layers_[target_layer_id]->blobs();
     CHECK_EQ(target_blobs.size(), source_layer.blobs_size())
         << "Incompatible number of blobs for layer " << source_layer_name;
-    for (int j = 0; j < target_blobs.size(); ++j) {
+    //LOG(INFO) << "---> "<<source_layer_name<< ": "<<target_blobs.size() <<" vs. "<< source_layer.blobs_size();
+
+	for (int j = 0; j < target_blobs.size(); ++j) {
       if (!target_blobs[j]->ShapeEquals(source_layer.blobs(j))) {
         Blob<Dtype> source_blob;
         const bool kReshape = true;

@@ -21,7 +21,7 @@ from ._caffe import Net, SGDSolver
 from .proto import caffe_pb2
 import caffe.io
 
-
+from IPython import embed
 
 # We directly update methods from Net here (rather than using composition or
 # inheritance) so that nets created by caffe (e.g., by SGDSolver) will
@@ -300,7 +300,7 @@ def _copy_from_bin(self, src):
             continue
         src_blobs  = src[srcLayers[k]]['blobs']
         dest_blobs = self.layers[i].blobs
-        assert numBlobs==len(src_blobs), 'blobs size should be same!'
+        assert numBlobs==len(src_blobs), '( %s vs. %s ) blobs size should be same!'%(numBlobs, len(src_blobs))
         
         for t,e in enumerate(dest_blobs):
             assert np.all( list(e.shape)==src_blobs[t]['shape']), '(%s vs %s) blob shape should be same!'%(

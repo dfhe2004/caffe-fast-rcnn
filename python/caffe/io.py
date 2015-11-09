@@ -2,6 +2,7 @@ import numpy as np
 import skimage.io
 from scipy.ndimage import zoom
 from skimage.transform import resize
+import cPickle
 
 try:
     # Python3 will most likely not be able to load protobuf
@@ -377,3 +378,28 @@ def oversample(images, crop_dims):
             ix += 1
         crops[ix-5:ix] = crops[ix-5:ix, :, ::-1, :]  # flip for mirrors
     return crops
+
+
+
+def caffemodel_to_bin(fname):
+    with open(fname, 'rb') as fh:
+        src = caffe_pb2.NetParameter.FromString(fh.read())
+
+    rs = []
+    for src_layer in src.layer:
+        e = {'name': str(src_layer.name), 'blobs': []}
+
+        if len(src_layer.blobs)==0:     continue
+        kk = 'double_data,double_diff,data,diff'.split(',')
+        for src_blob in src_layer.blobs:
+            b = {'shape': list(src_blob.shape.dim),}
+            for k in kk:
+                if len(getattr(src_blob,k))==0: continue
+                
+                b[k] = np.asarray(getattr(src_blob,k)).reshape(b['shape'])
+            e['blobs'].append(b)     
+        rs.append(e)
+    cPickle.dump(rs, open('%s.bin'%fname, 'wb'))
+
+
+

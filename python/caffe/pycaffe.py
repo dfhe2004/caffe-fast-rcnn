@@ -289,7 +289,7 @@ def _Net_batch(self, blobs):
 
 
 
-def _copy_from_bin(self, src):
+def _copy_from_arr(self, src):
     srcLayers = dict([ (e['name'],i) for i,e in enumerate(src) ])
     
     for i, k in enumerate(self._layer_names):
@@ -303,30 +303,24 @@ def _copy_from_bin(self, src):
         assert numBlobs==len(src_blobs), '( %s vs. %s ) blobs size should be same!'%(numBlobs, len(src_blobs))
         
         for t,e in enumerate(dest_blobs):
-            assert np.all( list(e.shape)==src_blobs[t]['shape']), '(%s vs %s) blob shape should be same!'%(
-                list(e.shape), src_blobs[t]['shape']
-            ) 
-            
-            src_blob = src_blobs[t] 
             logging.debug('copying from %s::%s shape|%s'%(k,t, e.data.shape,))
-            if not src_blob.get('double_data',None) is None:
-                #assert e.count==len(src_blob.double_data)
-                e.double_data[...] = src_blob['double_data'].astype(e.double_data.dtype)                  
+            src_blob = src_blobs[t] 
+            for k,v in src_blob.items():
+                if k=='shape':  continue
+                
+                _dest = getattr(e,k)
+                assert _dest.shape==v.shape,'(%s vs %s) blob shape should be same!'%(
+                    _dest.shape, v.shape
+                ) 
+                _dest[...] = v.astype(_dest.dtype)
             
-            if not src_blob.get('data',None) is None:
-                #assert e.count==len(src_blob.data)
-                e.data[...] = src_blob['data'].astype(e.data.dtype)                  
-            
-            if not src_blob.get('double_diff',None) is None:
-                e.double_diff[...] = src_blob['double_diff'].astype(e.double_diff.dtype)                  
-            
-            if not src_blob.get('diff',None) is None:
-                e.diff[...] = src_blob['diff'].astype(e.diff.dtype)                  
 
         src_blobs = None
     src = None
 
 
+
+'''
 def _copy_from_caffemode(self, src):
     srcLayers = dict([ (e.name,i) for i,e in enumerate(src.layer) ])
     
@@ -363,19 +357,24 @@ def _copy_from_caffemode(self, src):
 
         src_blobs = None
     src = None
-
+'''
 
 
 def _Net_py_copy_from(self,model_name):
-    if os.path.exists('%s.bin'%model_name):
-        src = cPickle.load(open('%s.bin'%model_name, 'rb'))        
-        _copy_from_bin(self,src)
+    fname, fext = os.path.splitext(model_name)
+    if fext.lower()=='.bin':
+        src = cPickle.load(open(model_name, 'rb'))        
+        _copy_from_arr(self,src)
         return
-
     
-    with open(model_name, 'rb') as fh:
-        src = caffe_pb2.NetParameter.FromString(fh.read())
-    _copy_from_caffemode(self,src)
+    if fext.lower()=='.h5':
+        src = caffe.io.arr_from_h5(model_name)         
+        _copy_from_arr(self,src)
+        return        
+    
+    assert fname==model_name
+    src = caffe.io.arr_from_caffemodel(model_name)
+    _copy_from_arr(self,src)
     
 
 

@@ -2,6 +2,8 @@ import numpy as np
 import skimage.io
 from scipy.ndimage import zoom
 from skimage.transform import resize
+
+import os
 import cPickle
 
 try:
@@ -380,8 +382,7 @@ def oversample(images, crop_dims):
     return crops
 
 
-
-def caffemodel_to_bin(fname):
+def arr_from_caffemodel(fname):
     with open(fname, 'rb') as fh:
         src = caffe_pb2.NetParameter.FromString(fh.read())
 
@@ -399,7 +400,57 @@ def caffemodel_to_bin(fname):
                 b[k] = np.asarray(getattr(src_blob,k)).reshape(b['shape'])
             e['blobs'].append(b)     
         rs.append(e)
-    cPickle.dump(rs, open('%s.bin'%fname, 'wb'))
+    return rs
 
 
+def arr_from_h5(fname):
+    import tables
+    
+    kk = 'double_data,double_diff,data,diff'.split(',')
+    key = 'L%s_B%s_K%s'
+    with tables.open_file(fname, mode='r') as h5f:
+        _net = h5f.root._v_attrs.net
+        
+        for i, _layer in enumerate(_net):
+            for j, _blob in enumerate(_layer['blobs']):
+                for k in kk:
+                    if _blob.get(k,None) is None:   continue
+                    
+                    _tname = key%(i,j,k)
+                    _vals = h5f.get_node('/%s'%_tname).read()
+                    _blob[k] = _vals
+    return _net                
+
+
+
+def arr_to_h5(src, fname):
+    import tables
+    _H5Zipper   = tables.Filters(complevel=5, complib='zlib')
+
+    _net  = []
+    kk = 'double_data,double_diff,data,diff'.split(',')
+    for  e in src:       # remove data
+        _layer  = {'name': e['name'], 'blobs': [] }
+        for  b in e['blobs']:
+            _blob = {'shape': b['shape'],}
+            for k in kk:
+                if b.get(k,None) is None:   continue
+                _blob[k] = True
+            _layer['blobs'].append(_blob)
+        _net.append(_layer)
+
+    key = 'L%s_B%s_K%s'
+    with tables.open_file(fname, mode='w') as h5f:
+        for i, _layer in enumerate(_net):
+            for j, _blob in enumerate(_layer['blobs']):
+                for k in kk:
+                    if _blob.get(k,None) is None:   continue
+                    
+                    _tname = key%(i,j,k)
+                    _vals = src[i]['blobs'][j][k]
+                    tArr = h5f.create_carray('/', _tname, tables.Atom.from_dtype(_vals.dtype), _vals.shape, filters=_H5Zipper )
+                    tArr[...] = _vals
+
+        h5f.root._v_attrs.net = _net
+        h5f.flush()
 

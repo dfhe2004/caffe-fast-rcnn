@@ -372,7 +372,7 @@ def _Net_py_copy_from(self,model_name):
         _copy_from_arr(self,src)
         return        
     
-    assert fname==model_name
+    #assert fext==model_name
     src = caffe.io.arr_from_caffemodel(model_name)
     _copy_from_arr(self,src)
     

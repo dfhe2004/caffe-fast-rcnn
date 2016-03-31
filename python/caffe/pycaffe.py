@@ -309,8 +309,8 @@ def _copy_from_arr(self, src):
                 if k=='shape':  continue
                 
                 _dest = getattr(e,k)
-                assert _dest.shape==v.shape,'(%s vs %s) blob shape should be same!'%(
-                    _dest.shape, v.shape
+                assert _dest.shape==v.shape,'layer|%s, (%s vs %s) blob shape should be same!'%(
+                    self._layer_names[i], _dest.shape, v.shape
                 ) 
                 _dest[...] = v.astype(_dest.dtype)
             

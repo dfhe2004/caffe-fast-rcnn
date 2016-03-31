@@ -177,6 +177,34 @@ struct NdarrayCallPolicies : public bp::default_call_policies {
   }
 };
 
+
+shared_ptr<Blob<Dtype> > Blob_Init(){
+  shared_ptr<Blob<Dtype> > blob(new Blob<Dtype>());
+  return blob;
+}
+
+shared_ptr<Layer<Dtype> > create_layer(const string& val){
+    LayerParameter lp;
+    
+    //if (!lp.ParseFromString(val)){
+    //    throw std::runtime_error("LayerParameter Parse Failed!!");
+    //}
+    lp.ParseFromString(val);
+    shared_ptr<Layer<Dtype> > layer = LayerRegistry<Dtype>::CreateLayer(lp);
+    return layer;
+}
+
+shared_ptr<Blob<Dtype> > Blob_Init_shape(bp::tuple args) {
+  vector<int> shape(bp::len(args));
+  for (int i = 0; i < bp::len(args); ++i) {
+    shape[i] = bp::extract<int>(args[i]);
+  }
+
+  shared_ptr<Blob<Dtype> > blob(new Blob<Dtype>(shape));
+  return blob;
+}
+
+
 bp::object Blob_Reshape(bp::tuple args, bp::dict kwargs) {
   if (bp::len(kwargs) > 0) {
     throw std::runtime_error("Blob.reshape takes no kwargs");
@@ -206,6 +234,8 @@ BOOST_PYTHON_MODULE(_caffe) {
   bp::def("set_random_seed", &Caffe::set_random_seed);
 
   bp::def("layer_type_list", &LayerRegistry<Dtype>::LayerTypeList);
+  bp::def("create_layer", &create_layer);
+
 
   bp::enum_<Phase>("Phase")
     .value("TRAIN", caffe::TRAIN)
@@ -244,6 +274,8 @@ BOOST_PYTHON_MODULE(_caffe) {
 
   bp::class_<Blob<Dtype>, shared_ptr<Blob<Dtype> >, boost::noncopyable>(
     "Blob", bp::no_init)
+    .def("__init__", bp::make_constructor(&Blob_Init))
+    .def("__init__", bp::make_constructor(&Blob_Init_shape))
     .add_property("shape",
         bp::make_function(
             static_cast<const vector<int>& (Blob<Dtype>::*)() const>(

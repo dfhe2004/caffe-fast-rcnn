@@ -3,8 +3,10 @@
 // Produce deprecation warnings (needs to come before arrayobject.h inclusion).
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
+
 #include <boost/make_shared.hpp>
 #include <boost/python.hpp>
+#include <boost/python/stl_iterator.hpp>
 #include <boost/python/raw_function.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <boost/python/enum.hpp>
@@ -26,6 +28,8 @@
 #endif
 
 namespace bp = boost::python;
+
+
 
 namespace caffe {
 
@@ -71,6 +75,14 @@ void CheckContiguousArray(PyArrayObject* arr, string name,
     throw std::runtime_error(name + " has wrong width");
   }
 }
+
+template< typename T >
+inline std::vector< T > to_std_vector( const bp::object& iterable ){
+    return std::vector< T >( bp::stl_input_iterator< T >( iterable ),
+                             bp::stl_input_iterator< T >( ) );
+}
+
+
 
 // Net constructor for passing phase as int
 shared_ptr<Net<Dtype> > Net_Init(
@@ -183,17 +195,6 @@ shared_ptr<Blob<Dtype> > Blob_Init(){
   return blob;
 }
 
-shared_ptr<Layer<Dtype> > create_layer(const string& val){
-    LayerParameter lp;
-    
-    //if (!lp.ParseFromString(val)){
-    //    throw std::runtime_error("LayerParameter Parse Failed!!");
-    //}
-    lp.ParseFromString(val);
-    shared_ptr<Layer<Dtype> > layer = LayerRegistry<Dtype>::CreateLayer(lp);
-    return layer;
-}
-
 shared_ptr<Blob<Dtype> > Blob_Init_shape(bp::tuple args) {
   vector<int> shape(bp::len(args));
   for (int i = 0; i < bp::len(args); ++i) {
@@ -218,6 +219,76 @@ bp::object Blob_Reshape(bp::tuple args, bp::dict kwargs) {
   // We need to explicitly return None to use bp::raw_function.
   return bp::object();
 }
+
+//-- layer
+shared_ptr<Layer<Dtype> > create_layer(const string& val){
+    LayerParameter lp;
+    
+    if (!lp.ParseFromString(val)){
+        throw std::runtime_error("LayerParameter Parse Failed!!");
+    }
+    shared_ptr<Layer<Dtype> > layer = LayerRegistry<Dtype>::CreateLayer(lp);
+    return layer;
+}
+
+bp::object Layer_SetUp(bp::tuple args, bp::dict kwargs) {  
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("Layer.Setup takes no kwargs");
+  }
+
+  Layer<Dtype>* _self = bp::extract<Layer<Dtype>*>(args[0]);
+  vector<Blob<Dtype>*> _bottom = to_std_vector<Blob<Dtype>*>(args[1]);
+  vector<Blob<Dtype>*> _top = to_std_vector<Blob<Dtype>*>(args[2]);
+  
+  _self->SetUp(_bottom, _top);
+  return bp::object();
+}
+
+bp::object Layer_Reshape(bp::tuple args, bp::dict kwargs) {  
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("Layer.reshape takes no kwargs");
+  }
+
+  Layer<Dtype>* _self = bp::extract<Layer<Dtype>*>(args[0]);
+  vector<Blob<Dtype>*> _bottom = to_std_vector<Blob<Dtype>*>(args[1]);
+  vector<Blob<Dtype>*> _top = to_std_vector<Blob<Dtype>*>(args[2]);
+
+  _self->Reshape(_bottom, _top);
+  return bp::object();
+}
+
+bp::object Layer_Forward(bp::tuple args, bp::dict kwargs) {  
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("Layer.Forward takes no kwargs");
+  }
+
+  Layer<Dtype>* _self = bp::extract<Layer<Dtype>*>(args[0]);
+  vector<Blob<Dtype>*> _bottom = to_std_vector<Blob<Dtype>*>(args[1]);
+  vector<Blob<Dtype>*> _top = to_std_vector<Blob<Dtype>*>(args[2]);
+
+  _self->Forward(_bottom, _top);
+  return bp::object();
+}
+
+
+bp::object Layer_Backward(bp::tuple args, bp::dict kwargs) {  
+  if (bp::len(kwargs) > 0) {
+    throw std::runtime_error("Layer.Forward takes no kwargs");
+  }
+
+  Layer<Dtype>* _self = bp::extract<Layer<Dtype>*>(args[0]);
+  vector<Blob<Dtype>*> _top = to_std_vector<Blob<Dtype>*>(args[1]);
+  vector<bool> _propagate_down = to_std_vector<bool>(args[2]);
+  vector<Blob<Dtype>*> _bottom = to_std_vector<Blob<Dtype>*>(args[3]);
+
+  _self->Backward(_top, _propagate_down, _bottom);
+  return bp::object();
+}
+
+
+
+
+
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SolveOverloads, Solve, 0, 1);
 
@@ -297,8 +368,12 @@ BOOST_PYTHON_MODULE(_caffe) {
     boost::noncopyable>("Layer", bp::init<const LayerParameter&>())
     .add_property("blobs", bp::make_function(&Layer<Dtype>::blobs,
           bp::return_internal_reference<>()))
-    .def("setup", &Layer<Dtype>::LayerSetUp)
-    .def("reshape", &Layer<Dtype>::Reshape)
+    //.def("setup", &Layer<Dtype>::LayerSetUp)
+    //.def("reshape", &Layer<Dtype>::Reshape)
+    .def("SetUp",    bp::raw_function(&Layer_SetUp))
+    .def("Reshape",  bp::raw_function(&Layer_Reshape))
+    .def("Forward",  bp::raw_function(&Layer_Forward))
+    .def("Backward", bp::raw_function(&Layer_Backward))
     .add_property("phase", bp::make_function(&Layer<Dtype>::phase))
     .add_property("type", bp::make_function(&Layer<Dtype>::type));
   bp::register_ptr_to_python<shared_ptr<Layer<Dtype> > >();

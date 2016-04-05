@@ -33,10 +33,10 @@ def check_gradient(layer, bottom, top, skip_bottom=None, skip_blobs=None, numeri
     loss = (top[0].data*p).sum()
     top[0].diff[...] = p
 
-    embed()
     layer.Backward(top, [True,]*len(bottom), bottom )
     sym_grads = [e.diff.copy() for e in blobs]
 
+    #embed()
     #-- numeric diff
     for iG, grad in enumerate(sym_grads):
         

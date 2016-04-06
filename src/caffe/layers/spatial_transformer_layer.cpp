@@ -4,6 +4,7 @@
 
 #include "caffe/layer.hpp"
 #include "caffe/custom_layers.hpp"
+#include "pydbg.h"
 
 namespace caffe {
 
@@ -44,7 +45,9 @@ namespace caffe {
             }
         }
 
-        // create source coordinates
+		_var_dump1(100, target_data);
+        
+		// create source coordinates
         vector<int> source_shape;
         source_shape.push_back(num_);
         source_shape.push_back(2);
@@ -57,9 +60,8 @@ namespace caffe {
         source_range_shape.push_back(num_);
         source_range_shape.push_back(height_);
         source_range_shape.push_back(width_);
-        source_range_shape.push_back(2);
+        source_range_shape.push_back(4);
         source_range_.Reshape(source_range_shape);
-        //caffe_set<Dtype>(num_*map_size_, -1, source_range_.mutable_cpu_data());
         
         // create source gradient cache for different channels, use for gpu calculation
         vector<int> source_grad_shape;
@@ -85,10 +87,10 @@ namespace caffe {
 
         Dtype* source_data = source_.mutable_cpu_data();
         int* source_range_data = source_range_.mutable_cpu_data();
+        caffe_set<Dtype>(top[0]->count(), 0, top_data);
         
-		caffe_set<Dtype>(top[0]->count(), 0, top_data);
-        caffe_set<int>(num_*map_size_, -1, source_range_.mutable_cpu_data());
-
+		_var_dump1(101, theta_data );
+		
 		for (int n = 0; n < num_; ++n) {
             // compute source coordinate 
             caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, 2, map_size_, 3, Dtype(1.0),
@@ -98,6 +100,7 @@ namespace caffe {
             caffe_scal<Dtype>(map_size_, (Dtype) (width_ - 1) / (Dtype) 2., source_data + n * 2 * map_size_);
             caffe_scal<Dtype>(map_size_, (Dtype) (height_ - 1) / (Dtype) 2., source_data + n*2*map_size_+map_size_);
             
+			_var_dump2(102, source_data, target_data);
             
             // compute U given source coordinate: O(W*H)
             for (int h = 0; h < height_; ++h) {
@@ -110,21 +113,21 @@ namespace caffe {
                     int w_max = std::min<Dtype>(width_-1, ceil(x)); 
                     int h_min = std::max<Dtype>(0,floor(y)); 
                     int h_max = std::min<Dtype>(height_-1, ceil(y)); 
-					
-					if(w_max<w_min || h_max<h_min)  continue;
-					source_range_data[source_range_.offset(n,h,w,0)] = w_min;
-                    source_range_data[source_range_.offset(n,h,w,1)] = h_min;
+                    source_range_data[source_range_.offset(n,h,w,0)] = w_min;
+                    source_range_data[source_range_.offset(n,h,w,1)] = w_max;
+                    source_range_data[source_range_.offset(n,h,w,2)] = h_min;
+                    source_range_data[source_range_.offset(n,h,w,3)] = h_max;
+                    for (int hh = h_min; hh <= h_max; ++hh) {
+                        for (int ww = w_min; ww <= w_max; ++ww) {
+                            for (int c = 0; c < channel_; ++c) {
+                                top_data[top[0]->offset(n, c, h, w)] += bottom[0]->data_at(n, c, hh, ww)*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
+							    _var_dump2(103, source_data, target_data);
+                            }
+                        }
+                    }
 
-					Dtype alpha = x-w_min;
-					Dtype beta  = y-h_min;
-					for(int c=0; c<channel_; ++c){
-						Dtype T00 = bottom[0]->data_at(n, c, h_min, w_min);
-						Dtype T10 = bottom[0]->data_at(n, c, h_min+1, w_min);
-						Dtype T11 = bottom[0]->data_at(n, c, h_min+1, w_min+1);
-						Dtype T01 = bottom[0]->data_at(n, c, h_min, w_min+1);
-						top_data[top[0]->offset(n, c, h, w)] = T00 + alpha*(T10 - T00) + beta*(T01 - T00) + alpha*beta*(T00+T11-T10-T01);
-					}
-				}
+
+                }
             }
         }
     }
@@ -153,15 +156,15 @@ namespace caffe {
                     Dtype x = source_data[source_.offset(n, 0, h, w)];
                     Dtype y = source_data[source_.offset(n, 1, h, w)];
                     int w_min = source_range_data[source_range_.offset(n,h,w,0)];
-					if (w_min<0) continue;
-                    int h_min = source_range_data[source_range_.offset(n,h,w,1)];
-                    
-					Dtype tmp_source_x = 0;
+                    int w_max = source_range_data[source_range_.offset(n,h,w,1)];
+                    int h_min = source_range_data[source_range_.offset(n,h,w,2)];
+                    int h_max = source_range_data[source_range_.offset(n,h,w,3)];
+                    Dtype tmp_source_x = 0;
                     Dtype tmp_source_y = 0;
                   
                     for (int c = 0; c < channel_; ++c) {
-						for (int hh = h_min; hh <= h_min+1; ++hh) {
-							for (int ww = w_min; ww <= w_min+1; ++ww) {
+						for (int hh = h_min; hh <= h_max; ++hh) {
+							for (int ww = w_min; ww <= w_max; ++ww) {
 								int sign_x = caffe_sign<Dtype>(ww - x);
 								int sign_y = caffe_sign<Dtype>(hh - y);//(y <= (Dtype)hh ) ? 1 : -1;
 

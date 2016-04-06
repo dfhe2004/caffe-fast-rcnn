@@ -39,14 +39,10 @@ namespace caffe {
             int h_min = (floor(y) >= 0) ? floor(y) : 0;
             int h_max = (ceil(y) < height) ? ceil(y) : (height - 1);
             int offset_range = (n * height * width + h * width + w) * 4;
-            if(w_max>w_min || h_max>h_min ) {
-				source_range_data[offset_range] = -1;
-				source_range_data[offset_range + 1] = -1;
-				continue;
-			}
-
-			source_range_data[offset_range] = w_min;
-            source_range_data[offset_range + 1] = h_min;
+            source_range_data[offset_range] = w_min;
+            source_range_data[offset_range + 1] = w_max;
+            source_range_data[offset_range + 2] = h_min;
+            source_range_data[offset_range + 3] = h_max;
         }
     }
 
@@ -70,20 +66,18 @@ namespace caffe {
             Dtype y = source_data[offset_source + height * width];
             int offset_range = (n * height * width + h * width + w) * 4;
             int w_min = source_range_data[offset_range];
-            if(w_min<0)	continue;
-
+            int w_max = source_range_data[offset_range + 1];
             int h_min = source_range_data[offset_range + 2];
-			
-			Dtype alpha = x-w_min;
-			Dtype beta  = y-h_min;
-			
+            int h_max = source_range_data[offset_range + 3];
+
             int offset_nc = n * channels * height * width + c * height*width;
-            
-			Dtype T00 = in[offset_nc + h_min * width + w_min]; 
-			Dtype T10 = in[offset_nc + (h_min+1) * width + w_min];
-			Dtype T11 = in[offset_nc + (h_min+1) * width + w_min+1];
-			Dtype T01 = in[offset_nc + h_min * width + w_min+1];
-			out[offset_nc + h * width + w] = T00 + alpha*(T10 - T00) + beta*(T01 - T00) + alpha*beta*(T00+T11-T10-T01);
+            Dtype tmp = 0;
+            for (int hh = h_min; hh <= h_max; ++hh) {
+                for (int ww = w_min; ww <= w_max; ++ww) {
+                    tmp += in[offset_nc + hh * width + ww]*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
+                }
+            }
+            out[offset_nc + h * width + w] = tmp;
         }
     }
 

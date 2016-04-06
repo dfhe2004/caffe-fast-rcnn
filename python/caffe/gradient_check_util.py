@@ -14,6 +14,9 @@ def reldiff(a, b):
     return reldiff
 
 
+def _pp(name,arr):
+    return '------ %s ------\n%s\n'%(name, arr.flatten())
+
 def check_gradient(layer, bottom, top, skip_bottom=None, skip_blobs=None, numeric_eps=1e-3, check_eps=1e-3, seed=1701 ):
     assert len(top)==1, 'only support one top'
 
@@ -64,9 +67,9 @@ def check_gradient(layer, bottom, top, skip_bottom=None, skip_blobs=None, numeri
             _grad.append(val)                        
         
         _grad = numpy.r_[_grad].reshape(grad.shape)
-        _err = reldiff(grad, _grad) 
-        assert _err<check_eps, 'Fail grad of bottom|%s, err|%g > %g'%(
-            iG, _err, check_eps
+        _err = reldiff(grad, _grad)
+        assert _err<check_eps, 'Fail grad of bottom|%s, err|%g > %g\n%s%s%s'%(
+            iG, _err, check_eps, _pp('grad', grad), _pp('_grad',_grad) , _pp('diff',grad-_grad) 
         )
         
         logging.debug('pass blobs|%s ... '%iG)

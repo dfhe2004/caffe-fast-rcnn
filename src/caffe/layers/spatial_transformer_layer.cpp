@@ -100,7 +100,7 @@ namespace caffe {
             caffe_scal<Dtype>(map_size_, (Dtype) (width_ - 1) / (Dtype) 2., source_data + n * 2 * map_size_);
             caffe_scal<Dtype>(map_size_, (Dtype) (height_ - 1) / (Dtype) 2., source_data + n*2*map_size_+map_size_);
             
-			_var_dump2(102, source_data, target_data);
+			_var_dump3(102, n, source_data, target_data);
             
             // compute U given source coordinate: O(W*H)
             for (int h = 0; h < height_; ++h) {
@@ -117,11 +117,13 @@ namespace caffe {
                     source_range_data[source_range_.offset(n,h,w,1)] = w_max;
                     source_range_data[source_range_.offset(n,h,w,2)] = h_min;
                     source_range_data[source_range_.offset(n,h,w,3)] = h_max;
+				    _var_dump4(103, w_min,w_max,h_min,h_max);
                     for (int hh = h_min; hh <= h_max; ++hh) {
                         for (int ww = w_min; ww <= w_max; ++ww) {
                             for (int c = 0; c < channel_; ++c) {
+                                Dtype tmp = bottom[0]->data_at(n, c, hh, ww)*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
+							    _var_dump5(104, n, c,h,w,&tmp);
                                 top_data[top[0]->offset(n, c, h, w)] += bottom[0]->data_at(n, c, hh, ww)*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
-							    _var_dump2(103, source_data, target_data);
                             }
                         }
                     }

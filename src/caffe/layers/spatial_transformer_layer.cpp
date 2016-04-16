@@ -4,7 +4,7 @@
 
 #include "caffe/layer.hpp"
 #include "caffe/custom_layers.hpp"
-#include "pydbg.h"
+//#include "pydbg.h"
 
 namespace caffe {
 
@@ -44,8 +44,6 @@ namespace caffe {
                 target_data[target_.offset(0, 2, h, w)] = (Dtype) 1.0;
             }
         }
-
-		_var_dump1(100, target_data);
         
 		// create source coordinates
         vector<int> source_shape;
@@ -89,8 +87,6 @@ namespace caffe {
         int* source_range_data = source_range_.mutable_cpu_data();
         caffe_set<Dtype>(top[0]->count(), 0, top_data);
         
-		_var_dump1(101, theta_data );
-		
 		for (int n = 0; n < num_; ++n) {
             // compute source coordinate 
             caffe_cpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, 2, map_size_, 3, Dtype(1.0),
@@ -100,15 +96,13 @@ namespace caffe {
             caffe_scal<Dtype>(map_size_, (Dtype) (width_ - 1) / (Dtype) 2., source_data + n * 2 * map_size_);
             caffe_scal<Dtype>(map_size_, (Dtype) (height_ - 1) / (Dtype) 2., source_data + n*2*map_size_+map_size_);
             
-			_var_dump3(102, n, source_data, target_data);
-            
             // compute U given source coordinate: O(W*H)
             for (int h = 0; h < height_; ++h) {
                 for (int w = 0; w < width_; ++w) {
                     Dtype x = source_data[source_.offset(n, 0, h, w)];
                     Dtype y = source_data[source_.offset(n, 1, h, w)];
 
-                    //O(C)
+					//O(C)
                     int w_min = std::max<Dtype>(0, floor(x)); 
                     int w_max = std::min<Dtype>(width_-1, ceil(x)); 
                     int h_min = std::max<Dtype>(0,floor(y)); 
@@ -117,18 +111,13 @@ namespace caffe {
                     source_range_data[source_range_.offset(n,h,w,1)] = w_max;
                     source_range_data[source_range_.offset(n,h,w,2)] = h_min;
                     source_range_data[source_range_.offset(n,h,w,3)] = h_max;
-				    _var_dump4(103, w_min,w_max,h_min,h_max);
-                    for (int hh = h_min; hh <= h_max; ++hh) {
+					for (int hh = h_min; hh <= h_max; ++hh) {
                         for (int ww = w_min; ww <= w_max; ++ww) {
                             for (int c = 0; c < channel_; ++c) {
-                                Dtype tmp = bottom[0]->data_at(n, c, hh, ww)*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
-							    _var_dump5(104, n, c,h,w,&tmp);
                                 top_data[top[0]->offset(n, c, h, w)] += bottom[0]->data_at(n, c, hh, ww)*(1 - fabs(x - ww)) * (1 - fabs(y - hh));
                             }
                         }
                     }
-
-
                 }
             }
         }

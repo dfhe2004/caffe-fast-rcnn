@@ -387,18 +387,24 @@ def arr_from_caffemodel(fname):
         src = caffe_pb2.NetParameter.FromString(fh.read())
 
     rs = []
+    kk = 'double_data,double_diff,data,diff'.split(',')
     for src_layer in src.layer:
         e = {'name': str(src_layer.name), 'blobs': []}
 
-        if len(src_layer.blobs)==0:     continue
-        kk = 'double_data,double_diff,data,diff'.split(',')
         for src_blob in src_layer.blobs:
             b = {'shape': list(src_blob.shape.dim),}
             for k in kk:
                 if len(getattr(src_blob,k))==0: continue
-                
-                b[k] = np.asarray(getattr(src_blob,k)).reshape(b['shape'])
+                _data = np.asarray(getattr(src_blob,k)) 
+                if b['shape']!=[]:
+                    _data = _data.reshape(b['shape'])
+                b[k] = _data
+                b['shape'] = _data.shape              # sometime the shape is [], we should adjust it to 1xn
+                #from IPython import embed; embed()
             e['blobs'].append(b)     
+            
+        if not e['blobs'] : continue
+
         rs.append(e)
     return rs
 

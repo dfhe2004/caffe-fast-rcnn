@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "hdf5.h"
+//#include "hdf5.h"
 
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
@@ -148,6 +148,7 @@ class DummyDataLayer : public Layer<Dtype> {
  *
  * TODO(dox): thorough documentation for Forward and proto params.
  */
+/*
 template <typename Dtype>
 class HDF5DataLayer : public Layer<Dtype> {
  public:
@@ -185,12 +186,14 @@ class HDF5DataLayer : public Layer<Dtype> {
   std::vector<unsigned int> data_permutation_;
   std::vector<unsigned int> file_permutation_;
 };
-
+*/
 /**
  * @brief Write blobs to disk as HDF5 files.
  *
  * TODO(dox): thorough documentation for Forward and proto params.
  */
+
+/*
 template <typename Dtype>
 class HDF5OutputLayer : public Layer<Dtype> {
  public:
@@ -229,6 +232,7 @@ class HDF5OutputLayer : public Layer<Dtype> {
   Blob<Dtype> data_blob_;
   Blob<Dtype> label_blob_;
 };
+*/
 
 /**
  * @brief Provides data to the Net from image files.

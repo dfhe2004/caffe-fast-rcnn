@@ -292,18 +292,18 @@ def _Net_batch(self, blobs):
 def _copy_from_arr(self, src):
     srcLayers = dict([ (e['name'],i) for i,e in enumerate(src) ])
     
-    for i, k in enumerate(self._layer_names):
+    for i, kLayer in enumerate(self._layer_names):
         numBlobs = len(self.layers[i].blobs)
         if numBlobs==0: continue
-        if not srcLayers.has_key(k):    
-            logging.debug('ignore layer(%s) from model'%k)
+        if not srcLayers.has_key(kLayer):    
+            logging.debug('ignore layer(%s) from model'%kLayer)
             continue
-        src_blobs  = src[srcLayers[k]]['blobs']
+        src_blobs  = src[srcLayers[kLayer]]['blobs']
         dest_blobs = self.layers[i].blobs
-        assert numBlobs==len(src_blobs), '( %s vs. %s ) blobs size should be same!'%(numBlobs, len(src_blobs))
+        assert numBlobs==len(src_blobs), 'layer<%s>: ( %s vs. %s ) blobs size should be same!'%(numBlobs, len(src_blobs))
         
         for t,e in enumerate(dest_blobs):
-            logging.debug('copying from %s::%s shape|%s'%(k,t, e.data.shape,))
+            logging.debug('copying from %s::%s shape|%s'%(kLayer,t, e.data.shape,))
             src_blob = src_blobs[t] 
             for k,v in src_blob.items():
                 if k=='shape':  continue
@@ -313,7 +313,7 @@ def _copy_from_arr(self, src):
                     logging.warning('layer|%s, (%s vs %s) blob shape should be same!'%(
                         self._layer_names[i], _dest.shape, v.shape
                     )) 
-                
+
                 v = v.astype(_dest.dtype)
                 v = v.reshape(_dest.shape)
                 _dest[...] = v.astype(_dest.dtype)

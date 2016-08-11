@@ -289,10 +289,14 @@ def _Net_batch(self, blobs):
 
 
 
-def _copy_from_arr(self, src):
+def _copy_from_arr(self, src, strict=True, skips=None):
     srcLayers = dict([ (e['name'],i) for i,e in enumerate(src) ])
     
     for i, kLayer in enumerate(self._layer_names):
+        if bool(skips) and kLayer in skips:
+            logging.debug('skip layer(%s) from model'%kLayer)
+            continue
+
         numBlobs = len(self.layers[i].blobs)
         if numBlobs==0: continue
         if not srcLayers.has_key(kLayer):    
@@ -309,10 +313,11 @@ def _copy_from_arr(self, src):
                 if k=='shape':  continue
                 
                 _dest = getattr(e,k)
-                if _dest.shape!=v.shape:
+                if (_dest.size!=v.size) or (strict and (_dest.shape!=v.shape)):
                     logging.warning('layer|%s, (%s vs %s) blob shape should be same!'%(
                         self._layer_names[i], _dest.shape, v.shape
-                    )) 
+                    ))
+                    continue
 
                 v = v.astype(_dest.dtype)
                 v = v.reshape(_dest.shape)
@@ -363,21 +368,21 @@ def _copy_from_caffemode(self, src):
 '''
 
 
-def _Net_py_copy_from(self,model_name):
+def _Net_py_copy_from(self,model_name, strict=True, skips=None):
     fname, fext = os.path.splitext(model_name)
     if fext.lower()=='.bin':
         src = cPickle.load(open(model_name, 'rb'))        
-        _copy_from_arr(self,src)
+        _copy_from_arr(self,src, strict,skips)
         return
     
     if fext.lower()=='.h5':
         src = caffe.io.arr_from_h5(model_name)         
-        _copy_from_arr(self,src)
+        _copy_from_arr(self,src,strict,skips)
         return        
     
     #assert fext==model_name
     src = caffe.io.arr_from_caffemodel(model_name)
-    _copy_from_arr(self,src)
+    _copy_from_arr(self,src,strict,skips)
     
 
 

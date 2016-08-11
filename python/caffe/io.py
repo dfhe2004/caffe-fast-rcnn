@@ -385,10 +385,14 @@ def oversample(images, crop_dims):
 def arr_from_caffemodel(fname):
     with open(fname, 'rb') as fh:
         src = caffe_pb2.NetParameter.FromString(fh.read())
-
+    
     rs = []
     kk = 'double_data,double_diff,data,diff'.split(',')
-    for src_layer in src.layer:
+    _layers = src.layer if len(src.layer)>0 else src.layers # some old version use "layers", the new version use "layer" 
+    print("... load layers|%s"%len(_layers))
+    
+    #from IPython import embed; embed()
+    for src_layer in _layers:
         e = {'name': str(src_layer.name), 'blobs': []}
 
         for src_blob in src_layer.blobs:
@@ -400,7 +404,6 @@ def arr_from_caffemodel(fname):
                     _data = _data.reshape(b['shape'])
                 b[k] = _data
                 b['shape'] = _data.shape              # sometime the shape is [], we should adjust it to 1xn
-                #from IPython import embed; embed()
             e['blobs'].append(b)     
             
         if not e['blobs'] : continue
